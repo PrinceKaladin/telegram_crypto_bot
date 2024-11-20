@@ -9,7 +9,8 @@
   "dependencies": {
     "axios": "^0.27.2",
     "firebase": "^9.6.8",
-    "node-telegram-bot-api": "^0.57.0"
+    "node-telegram-bot-api": "^0.57.0",
+    "dayjs": "^1.11.11,"
   },
   "engines": {
     "node": ">=16"
