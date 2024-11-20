@@ -1,9 +1,19 @@
 {
   "name": "my-bot",
   "version": "1.0.0",
+  "description": "A simple Node.js bot",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "axios": "^0.27.2",
+    "firebase": "^9.6.8",
+    "node-telegram-bot-api": "^0.57.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "author": "",
+  "license": "ISC"
 }
