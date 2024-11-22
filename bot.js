@@ -20,8 +20,8 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
-const bot = new TelegramBot("7043917766:AAHDB8qj9_uMzDSIc7jY-r98P37diGGw9co", { polling: true });
-const adminbot = new TelegramBot("7760163924:AAEdXY-WBT82M76Aj88ggtw-JConZ7Mejdw",{polling: true});
+const bot = new TelegramBot("7948010523:AAFonmLt_m3I7XnW-mQROBdnQt_pcnhJTq4", { polling: true });
+const adminbot = new TelegramBot("7309069165:AAEGrmshhCzosWYEna-nwEKxJaAk3QdPDR8",{polling: true});
 const questions = [
   "Вам есть 18 лет?",
   "Вы зарегистрированы на какой-нибудь биржи по типу Binance, Bybit, OKX?",
@@ -262,7 +262,7 @@ async function startMessageFlow(userId) {
       photos.map(async (fileId) => {
         // Получаем информацию о файле
         const file = await adminbot.getFile(fileId);
-        const fileUrl = `https://api.telegram.org/file/bot${"7760163924:AAEdXY-WBT82M76Aj88ggtw-JConZ7Mejdw"}/${file.file_path}`;
+        const fileUrl = `https://api.telegram.org/file/bot${"7309069165:AAEGrmshhCzosWYEna-nwEKxJaAk3QdPDR8"}/${file.file_path}`;
     
         // Загружаем файл как поток
         const response = await axios.get(fileUrl, { responseType: "stream" });
@@ -395,7 +395,7 @@ bot.onText(/\/start/, async (msg) => {
       photos.map(async (fileId) => {
         // Получаем информацию о файле
         const file = await adminbot.getFile(fileId);
-        const fileUrl = `https://api.telegram.org/file/bot${"7760163924:AAEdXY-WBT82M76Aj88ggtw-JConZ7Mejdw"}/${file.file_path}`;
+        const fileUrl = `https://api.telegram.org/file/bot${"7309069165:AAEGrmshhCzosWYEna-nwEKxJaAk3QdPDR8"}/${file.file_path}`;
     
         // Загружаем файл как поток
         const response = await axios.get(fileUrl, { responseType: "stream" });
