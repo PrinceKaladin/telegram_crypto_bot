@@ -529,144 +529,125 @@ adminbot.onText(/\/start/, (msg) => {
 
 }
 });
-
-// Обработчик нажатия на кнопки "День 1", "День 2" и т.д.
 adminbot.on('message', (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
-  if(admins.includes(chatId.toString())){
-  // Проверяем, что msg.text существует и является строкой
-  if (typeof text === 'string') {
-    // Если уже обрабатываем фото, игнорируем
-    if (userState[chatId] && userState[chatId].waitingForPhoto) {
-      return; // Если бот уже ожидает фото, игнорируем остальные сообщения
-    }
 
-    // Обработчик для "День 0"
-    if (text === 'День 0') {
-      const dayRef = 'photos'; // Сохраняем в ключ 'photos'
-  
-      // Устанавливаем состояние, что бот ожидает фото
-      userState[chatId] = { waitingForPhoto: true };
-  
-      // Уведомляем пользователя
-      adminbot.sendMessage(chatId, 'Пожалуйста, отправьте  3 фотографии для День 0.');
-  
-      // Создаем массив для хранения всех полученных фото
-      const photoIds = [];
-  
-      // Используем обработчик для сбора всех фотографий
-      const photoListener = adminbot.on('photo', async (photoMsg) => {
-          // Достаем массив размеров фотографии
-          const photos = photoMsg.photo;
-  
-          if (photos && photos.length > 0) {
-              // Берем фотографию с максимальным качеством
-              const photoId = photos[photos.length - 1].file_id;
-  
-              // Добавляем `file_id` в список
-              photoIds.push(photoId);
-  
-              // Отправляем фото обратно, чтобы показать, что они обработаны
-              
+  if (admins.includes(chatId.toString())) {
+    // Проверяем, что msg.text существует и является строкой
+    if (typeof text === 'string') {
+      // Если уже обрабатываем фото, игнорируем
+      if (userState[chatId] && userState[chatId].waitingForPhoto) {
+        return; // Если бот уже ожидает фото, игнорируем остальные сообщения
+      }
+
+      // Обработчик для "День 0"
+      if (text === 'День 0') {
+        const dayRef = 'photos'; // Сохраняем в ключ 'photos'
+
+        // Устанавливаем состояние, что бот ожидает фото
+        userState[chatId] = { waitingForPhoto: true, photos: [] };
+
+        // Уведомляем пользователя
+        adminbot.sendMessage(chatId, 'Пожалуйста, отправьте 3 фотографии для День 0.');
+
+        // Используем обработчик для сбора всех фотографий или текстовых сообщений
+        const photoListener = adminbot.on('message', async (photoMsg) => {
+          const photos = userState[chatId].photos;
+
+          // Если это фотография
+          if (photoMsg.photo) {
+            const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
+            photos.push(photoId);
+          } else {
+            // Если это не фотография, добавляем пустую строку
+            photos.push('');
           }
-  
-          // Если собрали 3 фотографии, прекращаем ожидание
-          if (photoIds.length >= 3) {
+
+          // Проверяем, собрано ли 3 элемента
+          if (photos.length >= 3) {
+            try {
               // Удаляем старые фотографии из Firebase
               const photosRefPath = ref(database, `/photos`);
               await remove(photosRefPath);
-  
-              // Сохраняем новые `photoIds` в Firebase
-              await set(ref(database, `/photos`), photoIds);
-  
-              // Отправляем уведомление
-              await adminbot.sendMessage(chatId, 'Фотографии для День 0 успешно сохранены.');
-  
-              // Сбрасываем состояние пользователя
-              userState[chatId].waitingForPhoto = false;
-  
-              // Убираем слушатель, чтобы он не обрабатывал новые сообщения
-              adminbot.removeListener('photo', photoListener);
-          }
-      });
-  }
 
-    // Обработчик нажатия на кнопки "День 1", "День 2", ... "День 15"
-    else if (text.startsWith('День')) {
-      const day = text.split(' ')[1]; // Получаем номер дня (1, 2, 3 и т.д.)
-      const dayRef = `photos${day}`; // Формируем ключ для Firebase
-  
-      // Устанавливаем состояние, что бот ожидает фото
-      userState[chatId] = { waitingForPhoto: true };
-  
-      // Уведомляем пользователя
-      adminbot.sendMessage(chatId, `Пожалуйста, отправьте 3 фотографии для День ${day}.`);
-  
-      // Создаем массив для хранения всех фотографий
-      const photoIds = [];
-  
-      // Обработчик для получения фотографий
-      const photoListener = adminbot.on('photo', async (photoMsg) => {
-          const photos = photoMsg.photo;
-  
-          if (photos && photos.length > 0) {
-              // Берем фотографию с максимальным качеством
-              const photoId = photos[photos.length - 1].file_id;
-  
-              // Сохраняем уникальный `file_id`
-              photoIds.push(photoId);
-  
-              // Отправляем фото обратно для подтверждения
-             
+              // Сохраняем новые данные в Firebase
+              await set(ref(database, `/photos`), photos);
+
+              // Уведомляем пользователя об успехе
+              await adminbot.sendMessage(chatId, 'Фотографии для День 0 успешно сохранены.');
+            } catch (error) {
+              console.error('Ошибка при сохранении в Firebase:', error);
+              await adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении данных.');
+            }
+
+            // Сбрасываем состояние пользователя
+            userState[chatId].waitingForPhoto = false;
+
+            // Убираем слушатель
+            adminbot.removeListener('message', photoListener);
+          } else {
+            // Уведомляем, сколько осталось
+            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото или сообщений.`);
           }
-  
-          // Если собрано 3 фотографии, завершаем ожидание
-          if (photoIds.length >= 3) {
+        });
+      }
+
+      // Обработчик нажатия на кнопки "День 1", "День 2", ... "День 15"
+      else if (text.startsWith('День')) {
+        const day = text.split(' ')[1]; // Получаем номер дня (1, 2, 3 и т.д.)
+        const dayRef = `photos${day}`; // Формируем ключ для Firebase
+
+        // Устанавливаем состояние, что бот ожидает фото
+        userState[chatId] = { waitingForPhoto: true, photos: [] };
+
+        // Уведомляем пользователя
+        adminbot.sendMessage(chatId, `Пожалуйста, отправьте 3 фотографии для День ${day}.`);
+
+        // Обработчик для получения фотографий или текстовых сообщений
+        const photoListener = adminbot.on('message', async (photoMsg) => {
+          const photos = userState[chatId].photos;
+
+          // Если это фотография
+          if (photoMsg.photo) {
+            const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
+            photos.push(photoId);
+          } else {
+            // Если это не фотография, добавляем пустую строку
+            photos.push('');
+          }
+
+          // Проверяем, собрано ли 3 элемента
+          if (photos.length >= 3) {
+            try {
               // Удаляем старые фотографии из Firebase
               const dayRefPath = ref(database, `/${dayRef}`);
               await remove(dayRefPath);
-  
-              // Сохраняем новые фотографии
-              await set(ref(database, `/${dayRef}`), photoIds);
-  
+
+              // Сохраняем новые данные в Firebase
+              await set(ref(database, `/${dayRef}`), photos);
+
               // Уведомляем пользователя об успехе
               await adminbot.sendMessage(chatId, `Фотографии для День ${day} успешно сохранены.`);
-  
-              // Сбрасываем состояние
-              userState[chatId].waitingForPhoto = false;
-  
-              // Убираем слушатель
-              adminbot.removeListener('photo', photoListener);
+            } catch (error) {
+              console.error('Ошибка при сохранении в Firebase:', error);
+              await adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении данных.');
+            }
+
+            // Сбрасываем состояние пользователя
+            userState[chatId].waitingForPhoto = false;
+
+            // Убираем слушатель
+            adminbot.removeListener('message', photoListener);
+          } else {
+            // Уведомляем, сколько осталось
+            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото или сообщений.`);
           }
-      });
-  }
-  
-
-    // Обработчик кнопки "Сообщество"
-    if (text === 'Сообщество') {
-      adminbot.sendMessage(chatId, 'Пожалуйста, напишите сообщение для сообщества.');
-      adminbot.once('message', async (communityMsg) => {
-        const communityMessage = communityMsg.text;
-        const communityRef = ref(database, '/community');
-        await set(communityRef, communityMessage);
-        adminbot.sendMessage(chatId, 'Сообщение для сообщества сохранено.');
-      });
+        });
+      }
     }
-
-    // Обработчик кнопки "Админ"
-    if (text === 'Админ') {
-      adminbot.sendMessage(chatId, 'Пожалуйста, напишите сообщение для админа.');
-      adminbot.once('message', async (adminMsg) => {
-        const adminMessage = adminMsg.text;
-        const adminRef = ref(database, '/glav_admin');
-        await set(adminRef, adminMessage);
-        adminbot.sendMessage(chatId, 'Сообщение для админа сохранено.');
-      });
-    }
-  }}else{
-  adminbot.sendMessage(chatId, 'у вас нет прав админа');
-    
+  } else {
+    adminbot.sendMessage(chatId, 'У вас нет прав администратора.');
   }
 });
 
