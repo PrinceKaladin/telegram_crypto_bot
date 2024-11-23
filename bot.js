@@ -529,6 +529,7 @@ adminbot.onText(/\/start/, (msg) => {
 
 }
 });
+// Обработчик нажатия на кнопки "День 1", "День 2" и т.д.
 adminbot.on('message', (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -536,9 +537,33 @@ adminbot.on('message', (msg) => {
   if (admins.includes(chatId.toString())) {
     // Проверяем, что msg.text существует и является строкой
     if (typeof text === 'string') {
-      // Если уже обрабатываем фото, игнорируем
+      // Если уже обрабатываем фото
       if (userState[chatId] && userState[chatId].waitingForPhoto) {
-        return; // Если бот уже ожидает фото, игнорируем остальные сообщения
+        const photos = userState[chatId].photos;
+        const dayRef = userState[chatId].dayRef;
+        const photoListener = userState[chatId].photoListener; // Сохраняем ссылку на слушатель
+
+        // Если текстовое сообщение, сохраняем уже имеющиеся фотографии и прекращаем ожидание
+        try {
+          if (text) {
+            // Сохраняем текущие фото в Firebase
+            set(ref(database, `/${dayRef}`), photos.length ? photos : []);
+
+            // Уведомляем пользователя об успешном сохранении
+            adminbot.sendMessage(chatId, `Фотографии для ${userState[chatId].dayName} успешно сохранены.`);
+
+            // Сбрасываем состояние пользователя
+            userState[chatId].waitingForPhoto = false;
+
+            // Убираем слушатель фото
+            adminbot.removeListener('photo', photoListener);
+          }
+        } catch (error) {
+          console.error('Ошибка при сохранении данных:', error);
+          adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении данных.');
+        }
+
+        return; // Прерываем обработку, так как ожидание завершено
       }
 
       // Обработчик для "День 0"
@@ -546,33 +571,24 @@ adminbot.on('message', (msg) => {
         const dayRef = 'photos'; // Сохраняем в ключ 'photos'
 
         // Устанавливаем состояние, что бот ожидает фото
-        userState[chatId] = { waitingForPhoto: true, photos: [] };
+        userState[chatId] = { waitingForPhoto: true, photos: [], dayRef, dayName: 'День 0' };
 
         // Уведомляем пользователя
         adminbot.sendMessage(chatId, 'Пожалуйста, отправьте 3 фотографии для День 0.');
 
-        // Используем обработчик для сбора всех фотографий или текстовых сообщений
-        const photoListener = adminbot.on('message', async (photoMsg) => {
+        // Используем обработчик для сбора всех фотографий
+        const photoListener = async (photoMsg) => {
           const photos = userState[chatId].photos;
 
           // Если это фотография
-          if (photoMsg.photo) {
-            const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
-            photos.push(photoId);
-          } else {
-            // Если это не фотография, добавляем пустую строку
-            photos.push('');
-          }
+          const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
+          photos.push(photoId);
 
-          // Проверяем, собрано ли 3 элемента
+          // Проверяем, собрано ли 3 фотографии
           if (photos.length >= 3) {
             try {
-              // Удаляем старые фотографии из Firebase
-              const photosRefPath = ref(database, `/photos`);
-              await remove(photosRefPath);
-
               // Сохраняем новые данные в Firebase
-              await set(ref(database, `/photos`), photos);
+              await set(ref(database, `/${dayRef}`), photos);
 
               // Уведомляем пользователя об успехе
               await adminbot.sendMessage(chatId, 'Фотографии для День 0 успешно сохранены.');
@@ -585,12 +601,16 @@ adminbot.on('message', (msg) => {
             userState[chatId].waitingForPhoto = false;
 
             // Убираем слушатель
-            adminbot.removeListener('message', photoListener);
+            adminbot.removeListener('photo', photoListener);
           } else {
             // Уведомляем, сколько осталось
-            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото или сообщений.`);
+            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото.`);
           }
-        });
+        };
+
+        // Добавляем слушатель на событие фото и сохраняем его
+        adminbot.on('photo', photoListener);
+        userState[chatId].photoListener = photoListener;
       }
 
       // Обработчик нажатия на кнопки "День 1", "День 2", ... "День 15"
@@ -599,31 +619,22 @@ adminbot.on('message', (msg) => {
         const dayRef = `photos${day}`; // Формируем ключ для Firebase
 
         // Устанавливаем состояние, что бот ожидает фото
-        userState[chatId] = { waitingForPhoto: true, photos: [] };
+        userState[chatId] = { waitingForPhoto: true, photos: [], dayRef, dayName: `День ${day}` };
 
         // Уведомляем пользователя
         adminbot.sendMessage(chatId, `Пожалуйста, отправьте 3 фотографии для День ${day}.`);
 
-        // Обработчик для получения фотографий или текстовых сообщений
-        const photoListener = adminbot.on('message', async (photoMsg) => {
+        // Обработчик для получения фотографий
+        const photoListener = async (photoMsg) => {
           const photos = userState[chatId].photos;
 
           // Если это фотография
-          if (photoMsg.photo) {
-            const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
-            photos.push(photoId);
-          } else {
-            // Если это не фотография, добавляем пустую строку
-            photos.push('');
-          }
+          const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
+          photos.push(photoId);
 
-          // Проверяем, собрано ли 3 элемента
+          // Проверяем, собрано ли 3 фотографии
           if (photos.length >= 3) {
             try {
-              // Удаляем старые фотографии из Firebase
-              const dayRefPath = ref(database, `/${dayRef}`);
-              await remove(dayRefPath);
-
               // Сохраняем новые данные в Firebase
               await set(ref(database, `/${dayRef}`), photos);
 
@@ -638,12 +649,16 @@ adminbot.on('message', (msg) => {
             userState[chatId].waitingForPhoto = false;
 
             // Убираем слушатель
-            adminbot.removeListener('message', photoListener);
+            adminbot.removeListener('photo', photoListener);
           } else {
             // Уведомляем, сколько осталось
-            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото или сообщений.`);
+            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото.`);
           }
-        });
+        };
+
+        // Добавляем слушатель на событие фото и сохраняем его
+        adminbot.on('photo', photoListener);
+        userState[chatId].photoListener = photoListener;
       }
     }
   } else {
