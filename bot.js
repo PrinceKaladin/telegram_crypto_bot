@@ -660,11 +660,44 @@ adminbot.on('message', (msg) => {
         adminbot.on('photo', photoListener);
         userState[chatId].photoListener = photoListener;
       }
+
+      // Обработчик кнопки "Сообщество"
+      if (text === 'Сообщество') {
+        adminbot.sendMessage(chatId, 'Пожалуйста, напишите сообщение для сообщества.');
+        adminbot.once('message', async (communityMsg) => {
+          const communityMessage = communityMsg.text;
+          const communityRef = ref(database, '/community');
+          try {
+            await set(communityRef, communityMessage);
+            adminbot.sendMessage(chatId, 'Сообщение для сообщества сохранено.');
+          } catch (error) {
+            console.error('Ошибка при сохранении сообщения сообщества:', error);
+            adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении сообщения сообщества.');
+          }
+        });
+      }
+
+      // Обработчик кнопки "Админ"
+      if (text === 'Админ') {
+        adminbot.sendMessage(chatId, 'Пожалуйста, напишите сообщение для админа.');
+        adminbot.once('message', async (adminMsg) => {
+          const adminMessage = adminMsg.text;
+          const adminRef = ref(database, '/glav_admin');
+          try {
+            await set(adminRef, adminMessage);
+            adminbot.sendMessage(chatId, 'Сообщение для админа сохранено.');
+          } catch (error) {
+            console.error('Ошибка при сохранении сообщения админа:', error);
+            adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении сообщения админа.');
+          }
+        });
+      }
     }
   } else {
     adminbot.sendMessage(chatId, 'У вас нет прав администратора.');
   }
 });
+
 
 // Обработчик ошибок polling
 adminbot.on('polling_error', (error) => {
