@@ -466,7 +466,7 @@ bot.on("callback_query", async (callbackQuery) => {
           const sentMessage = await bot.sendMessage(chatId, questions[index], options);
           return sentMessage.message_id;
         } else {
-          await bot.sendMessage(chatId, "Спасибо, что ответили на вопросы 🎉\nОтправьте '➕' нашему менеджеру "+admin+"   Для получения инструкции \nНаш канал по Обмену криптовалюты ⬇️⬇️⬇️\n[ПОДПИСАТЬСЯ]("+community+")",{parse_mode: "Markdown"});
+          await bot.sendMessage(chatId, "Спасибо, что ответили на вопросы 🎉\nОтправьте '➕' нашему менеджеру "+managerstring+"   Для получения инструкции \nНаш канал по Обмену криптовалюты ⬇️⬇️⬇️\n[ПОДПИСАТЬСЯ]("+community+")",{parse_mode: "Markdown"});
           await saveUserToNotVerified(username,userId); 
            last_username = username;
           last_userid = userId;
