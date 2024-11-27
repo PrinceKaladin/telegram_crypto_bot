@@ -8,6 +8,9 @@ let last_userid="";
 const admins = ["7055406122","7965035846"]
 const userTimers = {};
 let managerstring="";
+
+
+
 const firebaseConfig = {
   apiKey: "AIzaSyD2XAwoDZ994tR-ppf2w4G1gE_kIv7dH2Y",
   authDomain: "telegrambot1-9c41e.firebaseapp.com",
@@ -57,6 +60,9 @@ async function checkUserById(userId) {
     console.error('Error checking user:', error);
   }
 }
+(async () => {
+  managerstring = await getValueByPath("glav_admin");
+})();
 async function getPhotos(path) {
   try {
     const dbRef = ref(database);
@@ -435,7 +441,7 @@ bot.on("callback_query", async (callbackQuery) => {
   const userId = callbackQuery.from.id;
   const username = callbackQuery.from.first_name;
   const action = callbackQuery.data;
-  const admin = await getValueByPath("glav_admin")
+
   const community = await getValueByPath("community")
   if (action === "start_quiz") {
 
@@ -466,7 +472,10 @@ bot.on("callback_query", async (callbackQuery) => {
           const sentMessage = await bot.sendMessage(chatId, questions[index], options);
           return sentMessage.message_id;
         } else {
-          await bot.sendMessage(chatId, "Спасибо, что ответили на вопросы 🎉\nОтправьте '➕' нашему менеджеру "+managerstring+"   Для получения инструкции \nНаш канал по Обмену криптовалюты ⬇️⬇️⬇️\n[ПОДПИСАТЬСЯ]("+community+")",{parse_mode: "Markdown"});
+
+           const letty = managerstring.replace(/_/g, "\\_");
+           const letty1 = community.replace(/_/g, "\\_");
+          await bot.sendMessage(chatId, "Спасибо, что ответили на вопросы 🎉\nОтправьте '➕' нашему менеджеру "+letty+"   Для получения инструкции \nНаш канал по Обмену криптовалюты ⬇️⬇️⬇️\n[ПОДПИСАТЬСЯ]("+letty1+")",{parse_mode: "Markdown"});
           await saveUserToNotVerified(username,userId); 
            last_username = username;
           last_userid = userId;
