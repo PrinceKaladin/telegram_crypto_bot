@@ -255,7 +255,7 @@ async function startMessageFlow(userId) {
   // Устанавливаем таймеры для каждого дня
   userTimers[userId] = [];
   for (const day of daysToSend) {
-    const delay =day*24*60*60*1000/36000; // Конвертируем дни в миллисекунды
+    const delay =day*24*1000*3600; // Конвертируем дни в миллисекунды
     const photos = await getPhotos("photos"+day.toString());
     console.log(day)
     const mediaGroup = await Promise.all(
@@ -284,7 +284,7 @@ async function startMessageFlow(userId) {
       
       bot.sendMediaGroup(userId,mediaGroup);
       
-      await bot.sendMessage(userId,message);
+       bot.sendMessage(userId,message);
       
       // Удаляем таймер из хранилища, если это последний день
       if (day === Math.max(...daysToSend)) {
