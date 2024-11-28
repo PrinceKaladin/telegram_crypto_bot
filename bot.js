@@ -288,9 +288,9 @@ async function startMessageFlow(userId) {
       console.log(`Отправка пользователю ${userId} на день ${day}: ${message}`);
       // Здесь вызовите вашу функцию отправки сообщения, например:
       
-      bot.sendMediaGroup(userId,mediaGroup);
+      await bot.sendMediaGroup(userId,mediaGroup);
       
-       bot.sendMessage(userId,message);
+      await bot.sendMessage(userId,message);
       
       // Удаляем таймер из хранилища, если это последний день
       if (day === Math.max(...daysToSend)) {
