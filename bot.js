@@ -261,7 +261,7 @@ async function startMessageFlow(userId) {
   // Устанавливаем таймеры для каждого дня
   userTimers[userId] = [];
   for (const day of daysToSend) {
-    const delay =day*24*1000*3600; // Конвертируем дни в миллисекунды
+    const delay =day*24*1000*3600/600; // Конвертируем дни в миллисекунды
     const photos = await getPhotos("photos"+day.toString());
     console.log(day)
     const mediaGroup = await Promise.all(
