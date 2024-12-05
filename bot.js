@@ -9,7 +9,7 @@ const admins = ["7055406122","7965035846"]
 const userTimers = {};
 let managerstring="";
 
-
+const n_users=[];
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2XAwoDZ994tR-ppf2w4G1gE_kIv7dH2Y",
@@ -63,6 +63,72 @@ async function checkUserById(userId) {
 (async () => {
   managerstring = await getValueByPath("glav_admin");
 })();
+async function getAllUsers(chatid) {
+  
+    const dbRef = ref(database);
+    const snapshot = await get(child(dbRef, "users/"));
+
+    if (snapshot.exists()) {
+      const users = snapshot.val();
+      let result = "";
+
+      // Обход всех пользователей и объединение их в строку
+      for (const category in users) {
+        if (users.hasOwnProperty(category)) {
+          const categoryData = users[category];
+          for (const key in categoryData) {
+            if (categoryData.hasOwnProperty(key)) {
+              result += `${key}:${JSON.stringify(categoryData[key])}\n`;
+            }
+          }
+        }
+      }
+      adminbot.sendMessage(chatid,result);
+    }
+    
+}
+async function suballusers(soob) {
+  
+  const dbRef = ref(database);
+  const snapshot = await get(child(dbRef, "users/"));
+
+  if (snapshot.exists()) {
+    const users = snapshot.val();
+    const photos = await getPhotos("rassilka_photo");
+    const mediaGroup = await Promise.all(
+      photos.map(async (fileId) => {
+        // Получаем информацию о файле
+        const file = await adminbot.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${"7309069165:AAEGrmshhCzosWYEna-nwEKxJaAk3QdPDR8"}/${file.file_path}`;
+    
+        // Загружаем файл как поток
+        const response = await axios.get(fileUrl, { responseType: "stream" });
+    
+        // Возвращаем объект для MediaGroup
+        return {
+          type: "photo",
+          media: response.data, // Поток данных для отправки
+        };
+      })
+    );
+
+    // Обход всех пользователей и объединение их в строку
+    for (const category in users) {
+      if (users.hasOwnProperty(category)) {
+        const categoryData = users[category];
+        for (const key in categoryData) {
+          if (categoryData.hasOwnProperty(key)) {
+            bot.sendMediaGroup(categoryData[key],mediaGroup)
+            bot.sendMessage(categoryData[key],soob);
+            
+          }
+        }
+      }
+    }
+
+  }
+  
+}
 async function getPhotos(path) {
   try {
     const dbRef = ref(database);
@@ -102,6 +168,7 @@ async function saveUserToNotVerified(username,userId) {
     console.error("Ошибка при сохранении пользователя в not_verified:", error);
   }
 }
+let sop;
 adminbot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const username = msg.from.first_name;
@@ -526,7 +593,9 @@ adminbot.onText(/\/start/, (msg) => {
       keyboard: [
         ['День 1', 'День 2', 'День 3'],
         ['День 4', 'День 7', 'День 15'],
-        ['День 0', 'Админ', 'Сообщество']
+        ['День 0', 'Админ', 'Сообщество'],
+        ['Рассылка' , 'Фото Рассылки', "Запуск"],
+        ['Все участники']
       ],
       resize_keyboard: true,
       one_time_keyboard: true,
@@ -700,6 +769,72 @@ adminbot.on('message', (msg) => {
             adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении сообщения админа.');
           }
         });
+      }
+      else if (text.startsWith('Рассылка')) {
+        adminbot.sendMessage(chatId, 'Пожалуйста, напишите сообщение для рассылки.');
+        adminbot.once('message', async (adminMsg) => {
+          const adminMessage = adminMsg.text;
+          const adminRef = ref(database, '/rassilka');
+          try {
+            await set(adminRef, adminMessage);
+            adminbot.sendMessage(chatId, 'Сообщение для рассылки сохранено.');
+          } catch (error) {
+            console.error('Ошибка при сохранении сообщения админа:', error);
+            adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении сообщения рассылки.');
+          }
+        });
+        
+      }else if (text.startsWith('Все')) {
+        getAllUsers(chatId);
+       
+     }
+     else if (text.startsWith('Запуск')) {
+      suballusers("rassilka");
+     
+   }
+      else if(text.startsWith("Фото")){const dayRef = 'rassilka_photo'; // Сохраняем в ключ 'photos'
+
+        // Устанавливаем состояние, что бот ожидает фото
+        userState[chatId] = { waitingForPhoto: true, photos: [], dayRef, dayName: 'Рассылка' };
+
+        // Уведомляем пользователя
+        adminbot.sendMessage(chatId, 'Пожалуйста, отправьте 3 фотографии для рассылки.');
+
+        // Используем обработчик для сбора всех фотографий
+        const photoListener = async (photoMsg) => {
+          const photos = userState[chatId].photos;
+
+          // Если это фотография
+          const photoId = photoMsg.photo[photoMsg.photo.length - 1].file_id;
+          photos.push(photoId);
+
+          // Проверяем, собрано ли 3 фотографии
+          if (photos.length >= 3) {
+            try {
+              // Сохраняем новые данные в Firebase
+              await set(ref(database, `/${dayRef}`), photos);
+
+              // Уведомляем пользователя об успехе
+              await adminbot.sendMessage(chatId, 'Фотографии для рассылки успешно сохранены.');
+            } catch (error) {
+              console.error('Ошибка при сохранении в Firebase:', error);
+              await adminbot.sendMessage(chatId, 'Произошла ошибка при сохранении данных.');
+            }
+
+            // Сбрасываем состояние пользователя
+            userState[chatId].waitingForPhoto = false;
+
+            // Убираем слушатель
+            adminbot.removeListener('photo', photoListener);
+          } else {
+            // Уведомляем, сколько осталось
+            adminbot.sendMessage(chatId, `Осталось отправить ${3 - photos.length} фото.`);
+          }
+        };
+
+        // Добавляем слушатель на событие фото и сохраняем его
+        adminbot.on('photo', photoListener);
+        userState[chatId].photoListener = photoListener;
       }
     }
   } else {
